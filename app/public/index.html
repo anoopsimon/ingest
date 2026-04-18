@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#eef2f7" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ingest" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Ingest</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <link rel="mask-icon" href="/icons/icon.svg" color="#2563eb" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div>
+          <div class="app-name">Ingest</div>
+          <div class="app-subtitle">Magnet intake and torrent routing</div>
+        </div>
+        <nav class="topbar-nav">
+          <a href="/" aria-current="page">Chat</a>
+          <a href="/downloads">Downloads</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel chat-panel" aria-label="Chat panel">
+        <div class="panel-head">
+          <div>
+            <h1>Paste a magnet link to begin.</h1>
+            <p>Queue torrents into the selected library path with a fixed save location.</p>
+          </div>
+          <div id="connectionState" class="connection-state">Loading</div>
+        </div>
+
+        <div id="messageList" class="message-list" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+        <div id="actionRow" class="action-row" hidden></div>
+
+        <form id="messageForm" class="composer" autocomplete="off">
+          <input
+            id="messageInput"
+            class="composer-input"
+            type="text"
+            name="message"
+            placeholder="Paste a magnet link to begin."
+            aria-label="Message input"
+          />
+          <button id="sendButton" class="button primary" type="submit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Primary">
+      <a href="/" aria-current="page">Chat</a>
+      <a href="/downloads">Downloads</a>
+    </nav>
+
+    <script src="/app.js" defer></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

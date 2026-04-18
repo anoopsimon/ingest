@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ingest">
+  <rect width="512" height="512" rx="112" fill="#f8fafc"/>
+  <rect x="64" y="64" width="384" height="384" rx="80" fill="none" stroke="#0f172a" stroke-width="18"/>
+  <path d="M160 152h192c22 0 40 18 40 40v128c0 22-18 40-40 40H160c-22 0-40-18-40-40V192c0-22 18-40 40-40Z" fill="none" stroke="#2563eb" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M164 232h184M164 288h120" stroke="#0f172a" stroke-width="24" stroke-linecap="round"/>
+</svg>
+
