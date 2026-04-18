@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#eef2f7" />
+    <meta name="theme-color" content="#0a0f14" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Ingest" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -13,7 +13,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon.svg" />
-    <link rel="mask-icon" href="/icons/icon.svg" color="#2563eb" />
+    <link rel="mask-icon" href="/icons/icon.svg" color="#22c55e" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -21,7 +21,7 @@
       <div class="topbar-inner">
         <div>
           <div class="app-name">Ingest</div>
-          <div class="app-subtitle">Library mappings</div>
+          <div class="app-subtitle">Path map</div>
         </div>
         <nav class="topbar-nav">
           <a href="/">Chat</a>
@@ -36,7 +36,7 @@
         <div class="panel-head">
           <div>
             <h1>Language mappings</h1>
-            <p>Stored in SQLite. Chat chips and save paths read from here first.</p>
+            <p>SQLite-backed path map. Chat chips and save paths read from here first.</p>
           </div>
           <button id="newButton" class="button" type="button">New mapping</button>
         </div>
@@ -44,7 +44,7 @@
         <div class="settings-banner">
           <div>
             <span class="settings-banner-kicker">Editable in app</span>
-            <strong>Add Malayalam, English, Tamil, Hindi, Telugu, or any other library path.</strong>
+            <strong>Add Malayalam, English, Tamil, Hindi, Telugu, or anything else you want to route.</strong>
           </div>
           <div id="settingsSummary" class="settings-summary">Loading</div>
         </div>

@@ -2,13 +2,13 @@
   "name": "Ingest",
   "short_name": "Ingest",
   "id": "/",
-  "description": "Magnet intake and qBittorrent routing",
+  "description": "Scrappy magnet queue and qBittorrent routing",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eef2f7",
-  "theme_color": "#eef2f7",
+  "background_color": "#0a0f14",
+  "theme_color": "#0a0f14",
   "icons": [
     {
       "src": "/icons/icon.svg",
