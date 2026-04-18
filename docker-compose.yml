@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: ./app
+    container_name: ingest-app
+    environment:
+      PORT: ${PORT:-3000}
+      QB_URL: ${QB_URL:-http://qbittorrent:8080}
+      QB_USERNAME: ${QB_USERNAME:-admin}
+      QB_PASSWORD: ${QB_PASSWORD:-adminadmin}
+      QB_LOG_PATH: ${QB_LOG_PATH:-/qbittorrent-config/qBittorrent/logs/qbittorrent.log}
+      BASE_MALAYALAM: ${BASE_MALAYALAM:-/mnt/media/malayalam}
+      BASE_ENGLISH: ${BASE_ENGLISH:-/mnt/media/english}
+      BASE_TAMIL: ${BASE_TAMIL:-/mnt/media/tamil}
+      BASE_HINDI: ${BASE_HINDI:-/mnt/media/hindi}
+      DB_PATH: ${DB_PATH:-/app/data/app.db}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-15000}
+      TZ: ${TZ:-Australia/Melbourne}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./app/data:/app/data
+      - ./qbittorrent/config:/qbittorrent-config:ro
+      - /mnt/media:/mnt/media
+    depends_on:
+      - qbittorrent
+    restart: always
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: ingest-qbittorrent
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Australia/Melbourne}
+      WEBUI_PORT: 8080
+      WEBUI_USERNAME: ${QB_USERNAME:-admin}
+      WEBUI_PASSWORD: ${QB_PASSWORD:-adminadmin}
+    volumes:
+      - ./qbittorrent/config:/config
+      - ./qbittorrent/custom-cont-init.d:/custom-cont-init.d:ro
+      - /mnt/media:/mnt/media
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: always
