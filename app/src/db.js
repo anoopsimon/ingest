@@ -133,6 +133,10 @@ function openDatabase(dbPath, options = {}) {
     WHERE session_id = ?
     ORDER BY id ASC
   `);
+  const deleteMessagesForSessionStmt = db.prepare(`
+    DELETE FROM messages
+    WHERE session_id = ?
+  `);
 
   const insertDownloadStmt = db.prepare(`
     INSERT INTO downloads (
@@ -170,6 +174,11 @@ function openDatabase(dbPath, options = {}) {
     SELECT * FROM downloads
     ORDER BY id DESC
     LIMIT ?
+  `);
+  const deleteDownloadsStmt = db.prepare(`
+    DELETE FROM downloads
+    WHERE status IN ('completed', 'failed')
+       OR torrent_removed_at IS NOT NULL
   `);
   const listActiveDownloadsStmt = db.prepare(`
     SELECT * FROM downloads
@@ -255,6 +264,23 @@ function openDatabase(dbPath, options = {}) {
     return listMessagesStmt.all(sessionId);
   }
 
+  function clearChatHistory(sessionId) {
+    const timestamp = now();
+    ensureSessionStmt.run({ id: sessionId, created_at: timestamp, updated_at: timestamp });
+    deleteMessagesForSessionStmt.run(sessionId);
+    updateSessionStmt.run({
+      id: sessionId,
+      state: 'idle',
+      pending_magnet: null,
+      pending_display_name: null,
+      selected_language: null,
+      selected_language_key: null,
+      pending_folder_name: null,
+      updated_at: timestamp
+    });
+    return getSessionStmt.get(sessionId) || null;
+  }
+
   function createDownload(payload) {
     const row = {
       session_id: payload.session_id,
@@ -316,6 +342,11 @@ function openDatabase(dbPath, options = {}) {
 
   function listActiveDownloads() {
     return listActiveDownloadsStmt.all();
+  }
+
+  function clearDownloads() {
+    const result = deleteDownloadsStmt.run();
+    return result.changes;
   }
 
   function seedLanguageMappings(defaultMappings = seedLanguageOptions) {
@@ -458,12 +489,14 @@ function openDatabase(dbPath, options = {}) {
     updateSession,
     insertMessage,
     getMessages,
+    clearChatHistory,
     messageExists,
     createDownload,
     updateDownload,
     findDownloadByInfoHash,
     listDownloads,
     listActiveDownloads,
+    clearDownloads,
     seedLanguageMappings,
     listLanguageMappings,
     resolveLanguage,

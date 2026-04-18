@@ -44,10 +44,23 @@ function createChatRouter({ db, chatService }) {
     }
   });
 
+  router.post('/clear', express.json({ limit: '1mb' }), (req, res) => {
+    const sessionId = String(req.body?.sessionId || '').trim();
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const session = db.clearChatHistory(sessionId);
+    return res.json({
+      ok: true,
+      session,
+      messages: []
+    });
+  });
+
   return router;
 }
 
 module.exports = {
   createChatRouter
 };
-

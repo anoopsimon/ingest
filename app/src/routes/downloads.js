@@ -47,6 +47,14 @@ function createDownloadsRouter({ db, qb }) {
     return res.json({ downloads: liveDownloads });
   });
 
+  router.delete('/clear', (req, res) => {
+    const removed = db.clearDownloads();
+    return res.json({
+      ok: true,
+      removed
+    });
+  });
+
   return router;
 }
 

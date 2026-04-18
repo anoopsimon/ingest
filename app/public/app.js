@@ -5,6 +5,7 @@
   const form = document.getElementById('messageForm');
   const input = document.getElementById('messageInput');
   const sendButton = document.getElementById('sendButton');
+  const clearChatButton = document.getElementById('clearChatButton');
   const connectionState = document.getElementById('connectionState');
   const activeDownloadList = document.getElementById('activeDownloadList');
   const activeSummary = document.getElementById('activeSummary');
@@ -34,6 +35,42 @@
     const div = document.createElement('div');
     div.textContent = value == null ? '' : String(value);
     return div.innerHTML;
+  }
+
+  function isMagnetLink(value) {
+    return typeof value === 'string' && value.trim().startsWith('magnet:?xt=urn:btih:');
+  }
+
+  function magnetDisplayLabel(value) {
+    try {
+      const url = new URL(String(value || '').trim());
+      const displayName = (url.searchParams.get('dn') || '').trim();
+      const base = displayName ? displayName : 'MovieName';
+      return `${base}_Magnet`;
+    } catch (error) {
+      return 'MovieName_Magnet';
+    }
+  }
+
+  function buildMagnetBubble(content) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'magnet-message';
+
+    const tag = document.createElement('span');
+    tag.className = 'magnet-tag';
+    tag.textContent = 'Link';
+
+    const link = document.createElement('a');
+    link.className = 'magnet-link';
+    link.href = String(content || '').trim();
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = 'Open magnet link';
+    link.textContent = magnetDisplayLabel(content);
+
+    wrapper.appendChild(tag);
+    wrapper.appendChild(link);
+    return wrapper;
   }
 
   function statusTextFromState(state) {
@@ -135,7 +172,13 @@
       ) {
         bubble.classList.add('status-success');
       }
-      bubble.innerHTML = escapeHtml(message.content);
+
+      if (message.role === 'user' && isMagnetLink(message.content)) {
+        bubble.classList.add('magnet');
+        bubble.appendChild(buildMagnetBubble(message.content));
+      } else {
+        bubble.innerHTML = escapeHtml(message.content);
+      }
       messageList.appendChild(bubble);
     }
 
@@ -351,9 +394,43 @@
     }
   }
 
+  async function clearChat() {
+    clearChatButton.disabled = true;
+    try {
+      const response = await fetch('/api/chat/clear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear chat');
+      }
+
+      currentSession = { state: 'idle' };
+      await loadHistory();
+      await loadDownloads();
+    } catch (error) {
+      const failure = document.createElement('div');
+      failure.className = 'message system status-danger';
+      failure.textContent = 'Failed to clear chat.';
+      messageList.appendChild(failure);
+      messageList.scrollTop = messageList.scrollHeight;
+    } finally {
+      clearChatButton.disabled = false;
+      input.focus();
+    }
+  }
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     submitMessage(input.value, 'text');
+  });
+
+  clearChatButton.addEventListener('click', () => {
+    clearChat().catch(() => {});
   });
 
   input.addEventListener('keydown', (event) => {

@@ -1,6 +1,7 @@
 (function () {
   const body = document.getElementById('downloadsBody');
   const refreshButton = document.getElementById('refreshButton');
+  const clearDownloadsButton = document.getElementById('clearDownloadsButton');
   const downloadsSummary = document.getElementById('downloadsSummary');
 
   function escapeHtml(value) {
@@ -124,8 +125,34 @@
     renderRows(data.downloads || []);
   }
 
+  async function clearDownloads() {
+    const confirmed = window.confirm('Clear stored download history? Active torrents stay tracked.');
+    if (!confirmed) {
+      return;
+    }
+
+    clearDownloadsButton.disabled = true;
+    try {
+      const response = await fetch('/api/downloads/clear', {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear downloads');
+      }
+
+      await loadDownloads();
+    } finally {
+      clearDownloadsButton.disabled = false;
+    }
+  }
+
   refreshButton.addEventListener('click', () => {
     loadDownloads().catch(() => {});
+  });
+
+  clearDownloadsButton.addEventListener('click', () => {
+    clearDownloads().catch(() => {});
   });
 
   loadDownloads().catch(() => {
