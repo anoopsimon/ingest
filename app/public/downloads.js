@@ -53,7 +53,7 @@
     const extra = [speed ? `${speed}/s` : '', etaText ? `${etaText} left` : ''].filter(Boolean).join(' · ');
 
     return `
-      <div class="progress-inline">
+      <div class="progress-shell">
         <div class="progress-track" aria-hidden="true">
           <div class="progress-fill" style="width: ${percent}%"></div>
         </div>
@@ -76,31 +76,42 @@
       : 'No downloads';
 
     if (!downloads.length) {
-      const row = document.createElement('tr');
-      const cell = document.createElement('td');
-      cell.colSpan = 7;
-      cell.className = 'empty-state';
-      cell.textContent = 'No downloads yet.';
-      row.appendChild(cell);
-      body.appendChild(row);
+      const empty = document.createElement('div');
+      empty.className = 'empty-state downloads-empty';
+      empty.textContent = 'No downloads yet.';
+      body.appendChild(empty);
       return;
     }
 
     for (const download of downloads) {
-      const row = document.createElement('tr');
       const title = download.display_name || download.qb_name || download.folder_name || '';
       const created = formatTime(download.created_at);
+      const active = ['queued', 'downloading', 'stalled'].includes(String(download.status || '').toLowerCase());
 
-      row.innerHTML = `
-        <td data-label="Title">${escapeHtml(title)}</td>
-        <td data-label="Language">${escapeHtml(download.language || '')}</td>
-        <td data-label="Folder name">${escapeHtml(download.folder_name || '')}</td>
-        <td data-label="Status"><span class="status-pill ${statusClass(download.status)}">${escapeHtml(download.status || '')}</span></td>
-        <td data-label="Progress">${renderProgress(download)}</td>
-        <td data-label="Save path">${escapeHtml(download.save_path || '')}</td>
-        <td data-label="Created">${escapeHtml(created)}</td>
+      const card = document.createElement('article');
+      card.className = 'download-card';
+      card.innerHTML = `
+        <div class="download-card-head">
+          <div class="download-card-titlewrap">
+            <h2 class="download-card-title">${escapeHtml(title)}</h2>
+            <div class="download-card-meta">
+              <span>${escapeHtml(download.language || '')}</span>
+              <span>•</span>
+              <span>${escapeHtml(download.folder_name || '')}</span>
+            </div>
+          </div>
+          <span class="status-pill ${statusClass(download.status)}">${escapeHtml(download.status || '')}</span>
+        </div>
+        <div class="download-card-body">
+          ${renderProgress(download)}
+          <div class="download-card-path">${escapeHtml(download.save_path || '')}</div>
+          <div class="download-card-footer">
+            <span>${active ? 'Live' : 'Stored'}</span>
+            <span>${escapeHtml(created)}</span>
+          </div>
+        </div>
       `;
-      body.appendChild(row);
+      body.appendChild(card);
     }
   }
 
