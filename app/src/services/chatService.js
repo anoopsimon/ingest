@@ -40,7 +40,8 @@ function createChatService({ db, qb, config, resolveLanguage }) {
 
       db.updateSession(sessionId, {
         state: 'waiting_folder_name',
-        selected_language: selected.label
+        selected_language: selected.label,
+        selected_language_key: selected.key
       });
 
       responses.push('Movie folder name?');
@@ -54,7 +55,7 @@ function createChatService({ db, qb, config, resolveLanguage }) {
         return persistResponses(sessionId, responses);
       }
 
-      const selectedLanguage = resolveLanguage(session.selected_language);
+      const selectedLanguage = resolveLanguage(session.selected_language_key || session.selected_language);
       const basePath = selectedLanguage ? selectedLanguage.basePath : null;
       const savePath = buildExactSavePath(basePath, folderName);
       if (!savePath) {

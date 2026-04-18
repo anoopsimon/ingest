@@ -1,6 +1,7 @@
 # Ingest
 
 Phone-first magnet intake for qBittorrent. Paste a magnet, pick a language, enter a folder name, and the app queues the torrent into a fixed library path. When the download finishes, Ingest stops seeding, removes the torrent entry, and keeps the downloaded files.
+Use the Settings screen to add or edit language-to-path mappings in SQLite, so you can add paths like Telugu without changing `docker-compose.yml`.
 
 ## Spin Up
 
@@ -27,6 +28,7 @@ Open:
 
 - App: `http://localhost:3000`
 - qBittorrent: `http://localhost:8080`
+- Settings: `http://localhost:3000/settings`
 
 ## Always On
 
@@ -71,4 +73,3 @@ If your host uses different IDs, set `PUID` and `PGID` in `.env` to match.
 ## Plex
 
 Point Plex at the same `/mnt/media/...` folders so it sees the files directly.
-

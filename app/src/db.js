@@ -6,7 +6,17 @@ function now() {
   return new Date().toISOString();
 }
 
-function openDatabase(dbPath) {
+function normalizeLanguageKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
+}
+
+function openDatabase(dbPath, options = {}) {
+  const seedLanguageOptions = Array.isArray(options.seedLanguageOptions) ? options.seedLanguageOptions : [];
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   const db = new Database(dbPath);
@@ -20,6 +30,7 @@ function openDatabase(dbPath) {
       pending_magnet TEXT,
       pending_display_name TEXT,
       selected_language TEXT,
+      selected_language_key TEXT,
       pending_folder_name TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -53,6 +64,16 @@ function openDatabase(dbPath) {
       FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS language_mappings (
+      key TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      base_path TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages(session_id, id);
     CREATE INDEX IF NOT EXISTS idx_downloads_status_created ON downloads(status, id);
     CREATE INDEX IF NOT EXISTS idx_downloads_hash ON downloads(info_hash);
@@ -68,6 +89,13 @@ function openDatabase(dbPath) {
     db.exec(`ALTER TABLE downloads ADD COLUMN torrent_removed_at TEXT`);
   }
 
+  const sessionColumns = new Set(
+    db.prepare(`PRAGMA table_info(sessions)`).all().map((row) => row.name)
+  );
+  if (!sessionColumns.has('selected_language_key')) {
+    db.exec(`ALTER TABLE sessions ADD COLUMN selected_language_key TEXT`);
+  }
+
   const ensureSessionStmt = db.prepare(`
     INSERT INTO sessions (id, state, created_at, updated_at)
     VALUES (@id, 'idle', @created_at, @updated_at)
@@ -81,6 +109,7 @@ function openDatabase(dbPath) {
         pending_magnet = @pending_magnet,
         pending_display_name = @pending_display_name,
         selected_language = @selected_language,
+        selected_language_key = @selected_language_key,
         pending_folder_name = @pending_folder_name,
         updated_at = @updated_at
     WHERE id = @id
@@ -149,6 +178,37 @@ function openDatabase(dbPath) {
     ORDER BY id ASC
   `);
 
+  const listLanguageMappingsStmt = db.prepare(`
+    SELECT * FROM language_mappings
+    WHERE enabled = 1
+    ORDER BY sort_order ASC, label ASC
+  `);
+  const listAllLanguageMappingsStmt = db.prepare(`
+    SELECT * FROM language_mappings
+    ORDER BY sort_order ASC, label ASC
+  `);
+  const getLanguageMappingByKeyStmt = db.prepare(`
+    SELECT * FROM language_mappings
+    WHERE lower(key) = lower(?)
+    LIMIT 1
+  `);
+  const getLanguageMappingByLabelStmt = db.prepare(`
+    SELECT * FROM language_mappings
+    WHERE lower(label) = lower(?)
+    LIMIT 1
+  `);
+  const upsertLanguageMappingStmt = db.prepare(`
+    INSERT INTO language_mappings (key, label, base_path, enabled, sort_order, created_at, updated_at)
+    VALUES (@key, @label, @base_path, @enabled, @sort_order, @created_at, @updated_at)
+    ON CONFLICT(key) DO UPDATE SET
+      label = excluded.label,
+      base_path = excluded.base_path,
+      enabled = excluded.enabled,
+      sort_order = excluded.sort_order,
+      updated_at = excluded.updated_at
+  `);
+  const deleteLanguageMappingStmt = db.prepare(`DELETE FROM language_mappings WHERE lower(key) = lower(?)`);
+
   function ensureSession(id) {
     const timestamp = now();
     ensureSessionStmt.run({ id, created_at: timestamp, updated_at: timestamp });
@@ -171,6 +231,7 @@ function openDatabase(dbPath) {
       pending_magnet: Object.prototype.hasOwnProperty.call(patch, 'pending_magnet') ? patch.pending_magnet : current.pending_magnet,
       pending_display_name: Object.prototype.hasOwnProperty.call(patch, 'pending_display_name') ? patch.pending_display_name : current.pending_display_name,
       selected_language: Object.prototype.hasOwnProperty.call(patch, 'selected_language') ? patch.selected_language : current.selected_language,
+      selected_language_key: Object.prototype.hasOwnProperty.call(patch, 'selected_language_key') ? patch.selected_language_key : current.selected_language_key,
       pending_folder_name: Object.prototype.hasOwnProperty.call(patch, 'pending_folder_name') ? patch.pending_folder_name : current.pending_folder_name,
       updated_at: now()
     };
@@ -257,6 +318,112 @@ function openDatabase(dbPath) {
     return listActiveDownloadsStmt.all();
   }
 
+  function seedLanguageMappings(defaultMappings = seedLanguageOptions) {
+    const existing = new Set(
+      listAllLanguageMappingsStmt.all().map((row) => String(row.key || '').toLowerCase())
+    );
+
+    for (const option of defaultMappings) {
+      const key = normalizeLanguageKey(option.key || option.label);
+      if (!key || existing.has(key)) {
+        continue;
+      }
+
+      upsertLanguageMapping({
+        key,
+        label: option.label,
+        base_path: option.basePath,
+        enabled: true,
+        sort_order: option.sortOrder || 0
+      });
+    }
+  }
+
+  function listLanguageMappings(includeDisabled = false) {
+    return includeDisabled ? listAllLanguageMappingsStmt.all() : listLanguageMappingsStmt.all();
+  }
+
+  function resolveLanguage(input, fallbackMappings = []) {
+    if (!input) {
+      return null;
+    }
+
+    const value = String(input).trim();
+    if (!value) {
+      return null;
+    }
+
+    const fromDb =
+      getLanguageMappingByKeyStmt.get(value) ||
+      getLanguageMappingByLabelStmt.get(value) ||
+      null;
+
+    if (fromDb) {
+      if (Number(fromDb.enabled) !== 1) {
+        return null;
+      }
+
+      return {
+        key: fromDb.key,
+        label: fromDb.label,
+        basePath: fromDb.base_path,
+        enabled: true
+      };
+    }
+
+    const normalized = value.toLowerCase();
+    for (const option of fallbackMappings) {
+      if (
+        String(option.key || '').trim().toLowerCase() === normalized ||
+        String(option.label || '').trim().toLowerCase() === normalized
+      ) {
+        return {
+          key: option.key,
+          label: option.label,
+          basePath: option.basePath,
+          enabled: true
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function upsertLanguageMapping(payload) {
+    const label = String(payload.label || '').trim();
+    const basePath = String(payload.base_path || payload.basePath || '').trim();
+    const key = normalizeLanguageKey(payload.key || label);
+
+    if (!key || !label || !basePath) {
+      return null;
+    }
+
+    const row = {
+      key,
+      label,
+      base_path: basePath,
+      enabled: Object.prototype.hasOwnProperty.call(payload, 'enabled') ? (payload.enabled ? 1 : 0) : 1,
+      sort_order: Number.isFinite(Number(payload.sort_order ?? payload.sortOrder))
+        ? Number(payload.sort_order ?? payload.sortOrder)
+        : 0,
+      created_at: now(),
+      updated_at: now()
+    };
+
+    upsertLanguageMappingStmt.run(row);
+    return getLanguageMappingByKeyStmt.get(key);
+  }
+
+  function deleteLanguageMapping(key) {
+    const normalized = normalizeLanguageKey(key);
+    if (!normalized) {
+      return false;
+    }
+
+    const result = deleteLanguageMappingStmt.run(normalized);
+    return result.changes > 0;
+  }
+
   function messageExists(sessionId, content) {
     return Boolean(messageExistsStmt.get(sessionId, content));
   }
@@ -297,6 +464,11 @@ function openDatabase(dbPath) {
     findDownloadByInfoHash,
     listDownloads,
     listActiveDownloads,
+    seedLanguageMappings,
+    listLanguageMappings,
+    resolveLanguage,
+    upsertLanguageMapping,
+    deleteLanguageMapping,
     completeDownload,
     now
   };

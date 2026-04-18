@@ -1,32 +1,37 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { config, resolveLanguage } = require('./config');
+const { config } = require('./config');
 const { openDatabase } = require('./db');
 const { QbClient } = require('./qb');
 const { createChatService } = require('./services/chatService');
 const { createChatRouter } = require('./routes/chat');
 const { createDownloadsRouter } = require('./routes/downloads');
 const { createHealthRouter } = require('./routes/health');
+const { createSettingsRouter } = require('./routes/settings');
 const { createPoller } = require('./workers/poller');
 
-function ensureDirectories() {
+function ensureDirectories(db) {
   fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
-  for (const option of config.languageOptions) {
-    fs.mkdirSync(option.basePath, { recursive: true });
+  const mappings = db.listLanguageMappings(true);
+  const paths = new Set(mappings.map((mapping) => path.resolve(mapping.base_path)));
+  for (const basePath of paths) {
+    fs.mkdirSync(basePath, { recursive: true });
   }
 }
 
 async function main() {
-  ensureDirectories();
+  const db = openDatabase(config.dbPath, { seedLanguageOptions: config.languageOptions });
+  db.seedLanguageMappings(config.languageOptions);
+  ensureDirectories(db);
 
-  const db = openDatabase(config.dbPath);
   const qb = new QbClient({
     baseUrl: config.qbUrl,
     username: config.qbUsername,
     password: config.qbPassword,
     logPath: config.qbLogPath
   });
+  const resolveLanguage = (input) => db.resolveLanguage(input, config.languageOptions);
   const chatService = createChatService({
     db,
     qb,
@@ -50,8 +55,13 @@ async function main() {
     res.sendFile(path.join(publicDir, 'downloads.html'));
   });
 
+  app.get('/settings', (req, res) => {
+    res.sendFile(path.join(publicDir, 'settings.html'));
+  });
+
   app.use('/api/chat', createChatRouter({ db, chatService }));
   app.use('/api/downloads', createDownloadsRouter({ db, qb }));
+  app.use('/api/settings', createSettingsRouter({ db }));
   app.use('/api/health', createHealthRouter({ qb }));
 
   app.use((req, res) => {

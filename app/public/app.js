@@ -9,12 +9,13 @@
   const activeDownloadList = document.getElementById('activeDownloadList');
   const activeSummary = document.getElementById('activeSummary');
 
-  const languageButtons = [
+  const defaultLanguageButtons = [
     { label: 'Malayalam' },
     { label: 'English' },
     { label: 'Tamil' },
     { label: 'Hindi' }
   ];
+  let languageButtons = defaultLanguageButtons.slice();
 
   let sessionId = localStorage.getItem(sessionStorageKey);
   if (!sessionId) {
@@ -150,7 +151,8 @@
 
     if (currentSession.state === 'waiting_language') {
       actionRow.hidden = false;
-      for (const item of languageButtons) {
+      const buttons = languageButtons.length ? languageButtons : defaultLanguageButtons;
+      for (const item of buttons) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'chip';
@@ -231,6 +233,34 @@
     }
   }
 
+  async function loadLanguageButtons() {
+    try {
+      const response = await fetch('/api/settings/languages');
+      if (!response.ok) {
+        throw new Error('Failed to load language mappings');
+      }
+
+      const data = await response.json();
+      const languages = Array.isArray(data.languages) ? data.languages : [];
+      languageButtons = languages
+        .filter((language) => Number(language.enabled) === 1)
+        .map((language) => ({
+          key: language.key,
+          label: language.label
+        }));
+      if (currentSession.state === 'waiting_language') {
+        renderPrompt(currentSession);
+      }
+      return languageButtons;
+    } catch (error) {
+      languageButtons = defaultLanguageButtons.slice();
+      if (currentSession.state === 'waiting_language') {
+        renderPrompt(currentSession);
+      }
+      return languageButtons;
+    }
+  }
+
   async function loadDownloads() {
     if (downloadsLoading) {
       return downloadsCache;
@@ -274,7 +304,7 @@
   }
 
   async function refreshView() {
-    await Promise.all([loadHistory(), loadDownloads()]);
+    await Promise.all([loadLanguageButtons(), loadHistory(), loadDownloads()]);
   }
 
   async function submitMessage(message, inputType) {
@@ -335,6 +365,13 @@
 
   refreshView();
   setInterval(() => {
+    loadLanguageButtons().catch(() => {});
     loadDownloads().catch(() => {});
   }, 10000);
+
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      loadLanguageButtons().catch(() => {});
+    }
+  });
 })();

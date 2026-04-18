@@ -1,12 +1,15 @@
-const CACHE_NAME = 'ingest-shell-v3';
+const CACHE_NAME = 'ingest-shell-v4';
 const STATIC_ASSETS = [
   '/',
   '/downloads',
+  '/settings',
   '/index.html',
   '/downloads.html',
+  '/settings.html',
   '/styles.css',
   '/app.js',
   '/downloads.js',
+  '/settings.js',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-maskable.svg'
