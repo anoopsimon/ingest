@@ -51,7 +51,7 @@ async function main() {
   });
 
   app.use('/api/chat', createChatRouter({ db, chatService }));
-  app.use('/api/downloads', createDownloadsRouter({ db }));
+  app.use('/api/downloads', createDownloadsRouter({ db, qb }));
   app.use('/api/health', createHealthRouter({ qb }));
 
   app.use((req, res) => {

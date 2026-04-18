@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ingest-shell-v2';
+const CACHE_NAME = 'ingest-shell-v3';
 const STATIC_ASSETS = [
   '/',
   '/downloads',

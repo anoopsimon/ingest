@@ -59,10 +59,7 @@ function createChatService({ db, qb, config, resolveLanguage }) {
       const savePath = buildExactSavePath(basePath, folderName);
       if (!savePath) {
         responses.push('Folder name is required.');
-        return persistResponses(sessionId, responses, {
-          sessionState: 'waiting_folder_name',
-          userEntry
-        });
+        return persistResponses(sessionId, responses);
       }
 
       const pendingMagnet = session.pending_magnet;

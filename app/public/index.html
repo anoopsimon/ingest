@@ -40,6 +40,17 @@
           <div id="connectionState" class="connection-state">Loading</div>
         </div>
 
+        <section class="activity-panel" aria-label="Active downloads">
+          <div class="activity-panel-head">
+            <div>
+              <h2>Active downloads</h2>
+              <p>Live progress from qBittorrent.</p>
+            </div>
+            <div id="activeSummary" class="activity-summary">0 active</div>
+          </div>
+          <div id="activeDownloadList" class="active-download-list" aria-live="polite"></div>
+        </section>
+
         <div id="messageList" class="message-list" role="log" aria-live="polite" aria-relevant="additions"></div>
 
         <div id="actionRow" class="action-row" hidden></div>
